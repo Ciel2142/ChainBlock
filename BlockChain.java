@@ -26,8 +26,8 @@ public class BlockChain implements Serializable {
         this.SAVE = file != null;
         this.PATH = file;
         this.CHAIN = new ArrayList<>();
-        this.addBlock();
         this.MESSAGES = new ArrayList<>();
+        this.addBlock();
         if (this.SAVE) {
             this.saveChain();
         }
@@ -40,23 +40,31 @@ public class BlockChain implements Serializable {
 
     public void addBlock() {
         this.currentID++;
-        this.MESSAGES.clear();
-
-        ExecutorService messageStream = Executors.newSingleThreadExecutor();
         ExecutorService minerExecutor = Executors.newFixedThreadPool(
                 Runtime.getRuntime().availableProcessors());
+        ExecutorService messageStream = Executors.newSingleThreadExecutor();
 
-        messageStream.submit(new Messages(this.MESSAGES));
-        Future<Block> blockFuture = minerExecutor.submit(new Miner(
-                getPreviousHash(), getZeroString(), this.currentID, Instant.now()));
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Future<Block> blockFuture = minerExecutor.submit(new Miner(getPreviousHash(),
+                getZeroString(), this.currentID, Instant.now(), this.consolidateMessages()));
+
+        this.MESSAGES.clear();
+
+        Messages messagesRun = new Messages(this.MESSAGES);
+        messageStream.submit(messagesRun);
 
         try {
             this.CHAIN.add(blockFuture.get());
             minerExecutor.shutdownNow();
             minerExecutor.awaitTermination(100L, TimeUnit.MILLISECONDS);
-            messageStream.shutdownNow();
+            messagesRun.stop();
             messageStream.awaitTermination(100L, TimeUnit.MILLISECONDS);
             if (!validateChain()) {
+                this.currentID--;
                 this.CHAIN.remove(this.CHAIN.size() - 1);
                 this.addBlock();
                 return;
@@ -69,6 +77,15 @@ public class BlockChain implements Serializable {
         } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private String consolidateMessages() {
+        if (this.CHAIN.size() == 0) {
+            return "Block data: no messages\n";
+        }
+        StringBuilder blockData = new StringBuilder("Block data:\n");
+        this.MESSAGES.forEach(message -> blockData.append(message).append("\n"));
+        return blockData.toString();
     }
 
     private void changeZeroValue(long time) {

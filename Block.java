@@ -14,10 +14,12 @@ class Block implements Serializable {
     private final long MAGIC_NUMBER;
     private final long MINER_ID;
     private final String MESSAGE;
+    private final String BlockData;
 
 
-    public Block(String PREVIOUS_HASH, String hash, String message,
-                 int ID, long minerId, long magicNumber, long timeToCreate) {
+    public Block(String PREVIOUS_HASH, String hash, String message, int ID,
+                 long minerId, long magicNumber, long timeToCreate, String mess) {
+        this.BlockData = mess;
         this.TIME_TO_CREATE_HASH = timeToCreate;
         this.MAGIC_NUMBER = magicNumber;
         this.CURRENT_HASH = hash;
@@ -42,6 +44,7 @@ class Block implements Serializable {
                         "%s%n" +
                         "Hash of the block:%n" +
                         "%s%n" +
+                        "%s" +
                         "Block was generating for %d seconds%n" +
                         "%s",
                 this.MINER_ID,
@@ -50,6 +53,7 @@ class Block implements Serializable {
                 this.MAGIC_NUMBER,
                 this.PREVIOUS_HASH,
                 this.CURRENT_HASH,
+                this.BlockData,
                 this.TIME_TO_CREATE_HASH,
                 this.MESSAGE);
     }

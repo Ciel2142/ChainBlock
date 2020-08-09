@@ -5,10 +5,8 @@ import java.util.Scanner;
 
 public class Messages implements Runnable {
 
-    private static Messages MESSAGES;
-
     private final List<Message> MESSAGE_LIST;
-    private Scanner sc;
+    private final Scanner sc;
     private boolean stop;
 
     Messages(List<Message> messageList) {
@@ -24,6 +22,7 @@ public class Messages implements Runnable {
     }
 
     public void stop() {
+        System.out.println("was called");
         this.stop = true;
     }
 }

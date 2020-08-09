@@ -10,8 +10,11 @@ public class Miner implements Callable<Block> {
     private final String zeroString;
     private final int id;
     private final Instant time;
+    private final String mess;
 
-    public Miner(String prevHash, String zeroString, int id, Instant startedMaking) {
+    public Miner(String prevHash, String zeroString, int id,
+                 Instant startedMaking, String mess) {
+        this.mess = mess;
         this.prevHash = prevHash;
         this.zeroString = zeroString;
         this.id = id;
@@ -28,6 +31,6 @@ public class Miner implements Callable<Block> {
                 String.format("N was increased to %d",
                 this.zeroString.length() + 1) :
                 (created < 40 ? "N stays the same" : "N was decreased by 1");
-        return new Block(prevHash, hash, message, id, minerId, magicNumber, created);
+        return new Block(prevHash, hash, message, id, minerId, magicNumber, created, mess);
     }
 }
