@@ -11,11 +11,12 @@ import java.util.concurrent.*;
 public class BlockChain implements Serializable {
 
     private static final long serialVersionUID = 3L;
-    private final List<Block> chain;
+    private final List<Block> CHAIN;
     private final boolean SAVE;
     private final File PATH;
     private int currentID;
     private int zeros;
+    private final List<Message> MESSAGES;
 
     public BlockChain() {
         this(null);
@@ -24,49 +25,57 @@ public class BlockChain implements Serializable {
     public BlockChain(File file) {
         this.SAVE = file != null;
         this.PATH = file;
-        this.chain = new ArrayList<>();
+        this.CHAIN = new ArrayList<>();
         this.addBlock();
+        this.MESSAGES = new ArrayList<>();
         if (this.SAVE) {
             this.saveChain();
         }
     }
 
-    public String getZeroString() {
+    private String getZeroString() {
         return this.zeros > 0 ? "0".repeat(this.zeros) : "";
     }
 
+
     public void addBlock() {
         this.currentID++;
-        ExecutorService executor = Executors.newFixedThreadPool(
-                Runtime.getRuntime().availableProcessors());
-        Instant timeToCreate = Instant.now();
+        this.MESSAGES.clear();
 
-        Future<Block> blockFuture = executor.submit(new Miner(
-                getPreviousHash(), getZeroString(), this.currentID, timeToCreate));
+        ExecutorService messageStream = Executors.newSingleThreadExecutor();
+        ExecutorService minerExecutor = Executors.newFixedThreadPool(
+                Runtime.getRuntime().availableProcessors());
+
+        messageStream.submit(new Messages(this.MESSAGES));
+        Future<Block> blockFuture = minerExecutor.submit(new Miner(
+                getPreviousHash(), getZeroString(), this.currentID, Instant.now()));
+
         try {
-            this.chain.add(blockFuture.get());
-            executor.shutdownNow();
-            executor.awaitTermination(300L, TimeUnit.MILLISECONDS);
+            this.CHAIN.add(blockFuture.get());
+            minerExecutor.shutdownNow();
+            minerExecutor.awaitTermination(100L, TimeUnit.MILLISECONDS);
+            messageStream.shutdownNow();
+            messageStream.awaitTermination(100L, TimeUnit.MILLISECONDS);
+            if (!validateChain()) {
+                this.CHAIN.remove(this.CHAIN.size() - 1);
+                this.addBlock();
+                return;
+            }
+            this.changeZeroValue(this.CHAIN.get(CHAIN.size() - 1).
+                    getTIME_TO_CREATE_HASH());
+            if (this.SAVE) {
+                this.saveChain();
+            }
         } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
 
-        if (!validateChain()) {
-            this.chain.remove(this.chain.size() - 1);
-            this.addBlock();
-            return;
-        }
-
-        long time = this.chain.get(chain.size() - 1).getTIME_TO_CREATE_HASH();
-
+    private void changeZeroValue(long time) {
         if (time < 20) {
             this.zeros++;
         } else if (time > 40) {
             this.zeros--;
-        }
-
-        if (this.SAVE) {
-            this.saveChain();
         }
     }
 
@@ -75,7 +84,7 @@ public class BlockChain implements Serializable {
     }
 
     private boolean validateChain() {
-        Iterator<Block> chainIterator = this.chain.iterator();
+        Iterator<Block> chainIterator = this.CHAIN.iterator();
         String hash = chainIterator.next().getCurrentHash();
         Block currBlock;
 
@@ -95,12 +104,12 @@ public class BlockChain implements Serializable {
     }
 
     private String getPreviousHash() {
-        return this.chain.size() > 0 ?
-                this.chain.get(chain.size() - 1).getCurrentHash() : "0";
+        return this.CHAIN.size() > 0 ?
+                this.CHAIN.get(CHAIN.size() - 1).getCurrentHash() : "0";
     }
 
     public void printChain() {
-        for (Block block : this.chain) {
+        for (Block block : this.CHAIN) {
             System.out.println(block);
             System.out.println();
         }
