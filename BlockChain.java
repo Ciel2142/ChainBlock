@@ -1,15 +1,16 @@
 package blockchain;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.*;
 
-public class BlockChain {
+public class BlockChain implements Serializable {
 
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 3L;
     private final List<Block> chain;
     private final boolean SAVE;
     private final File PATH;
@@ -40,8 +41,8 @@ public class BlockChain {
                 Runtime.getRuntime().availableProcessors());
         Instant timeToCreate = Instant.now();
 
-        Future<Block> blockFuture = executor.submit(
-                new Miner(getPreviousHash(), getZeroString(), this.currentID, timeToCreate));
+        Future<Block> blockFuture = executor.submit(new Miner(
+                getPreviousHash(), getZeroString(), this.currentID, timeToCreate));
         try {
             this.chain.add(blockFuture.get());
             executor.shutdownNow();
@@ -55,7 +56,9 @@ public class BlockChain {
             this.addBlock();
             return;
         }
+
         long time = this.chain.get(chain.size() - 1).getTIME_TO_CREATE_HASH();
+
         if (time < 20) {
             this.zeros++;
         } else if (time > 40) {
